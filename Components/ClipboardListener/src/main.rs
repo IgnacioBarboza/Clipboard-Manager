@@ -1,3 +1,8 @@
+
+
+//https://docs.rs/wayland-clipboard-listener/latest/wayland_clipboard_listener/
+
+
 use wayland_clipboard_listener::WlClipboardPasteStream;
 //Es la estructura principal (struct) de la biblioteca. Se encarga de conectarse al servidor gráfico (Wayland) y 
 //abstraer la complejidad subyacente de los protocolos wlr-data-control-unstable-v1 y ext-data-control-v1.
