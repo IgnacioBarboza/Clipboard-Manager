@@ -1,8 +1,7 @@
 [package]
-name = "Prototype"
+name = "CircularBuffer"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 circular-buffer = "2.0.1"
-wayland-clipboard-listener = "0.6.1"

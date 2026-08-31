@@ -6,6 +6,7 @@ version = 4
 name = "Prototype"
 version = "0.1.0"
 dependencies = [
+ "circular-buffer",
  "wayland-clipboard-listener",
 ]
 
@@ -24,6 +25,12 @@ dependencies = [
  "find-msvc-tools",
  "shlex",
 ]
+
+[[package]]
+name = "circular-buffer"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "662f6b21c6e889ee4e3f449e197c40f03603472fcd40c709093d386e3dca07cf"
 
 [[package]]
 name = "downcast-rs"

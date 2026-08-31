@@ -1,8 +1,10 @@
 use wayland_clipboard_listener::WlClipboardPasteStream;
 use std::process::Command;
 use wayland_clipboard_listener::WlListenType;
+use circular_buffer::FixedCircularBuffer;
 
-fn notify(title: String, body: String) {
+
+fn notify(title: &String, body: &String) {
     let status = Command::new("notify-send")
         .arg(title)
         .arg(body)
@@ -18,10 +20,12 @@ fn notify(title: String, body: String) {
 
 fn main() {
     // RUN cargo add wayland_clipboard_listener
+    // RUN cargo add circular_buffer
     
     let mut stream = WlClipboardPasteStream::init(WlListenType::ListenOnCopy).unwrap(); 
     // Open the clipboard listener to passively listen on copy events.
-    
+    let mut clipboard_log = FixedCircularBuffer::<String, 5>::new();
+
     for event in stream.paste_stream().flatten() {
         // Iterate through each successful event
 
@@ -38,15 +42,26 @@ fn main() {
             match String::from_utf8(content_actual_event) {
                 // Decode the content to UTF-8
                 Ok(text) => {
-                    notify("New Input in the Clipboard".to_string(), text);
                     // Notify the user
+                    notify(&"New Input in the Clipboard".to_string(), &text);
+
+                    // Push the content to the buffer
+                    clipboard_log.push_back(text);
+                    
+                    // Print content of the whole clipboard
+                    println!("*----------*");
+                    println!("Content of clipboard: ");
+                    for i in 0..clipboard_log.len() {
+                        println!("{}: {}",i, clipboard_log[i]);
+                    }
+                    println!("*----------*");
                 },
                 Err(error) => {
                     eprintln!("There's been an error during decoding: {}", error);
                 }
             }
         } else {
-            notify("New Input in the Clipboard".to_string(), "Not Supported for ".to_owned() + &type_actual_event + " type");
+            notify(&"New Input in the Clipboard".to_string(), &("Not Supported for ".to_owned() + &type_actual_event + " type"));
         }
     }
 }
