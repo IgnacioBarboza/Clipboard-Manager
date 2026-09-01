@@ -4,7 +4,7 @@ use crate::circular_trait::CircularLog;
 const SIZE: usize = 5;
 pub type Buffer = FixedCircularBuffer<String, SIZE>;
 
-impl ClipboardBuffer for Buffer {
+impl CircularLog for Buffer {
     fn new() -> Self {
         FixedCircularBuffer::<String, SIZE>::new()
     }

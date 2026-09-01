@@ -1,38 +1,43 @@
 use wayland_clipboard_listener::WlClipboardPasteStream;
-use std::process::Command;
 use wayland_clipboard_listener::WlListenType;
-use circular_buffer::FixedCircularBuffer;
 
-fn notify_user(title: &String, body: &String) {
-    let status = Command::new("notify-send")
-        .arg(title)
-        .arg(body)
-        .status()
-        .expect("Error at trying to send a notification");
+mod circular_trait;
+mod circular_impl;
 
-    if status.success() {
-        println!("The notification has been sent");
-    } else {
-        println!("There's been an error: {}", status);
-    }
-}
+use circular_trait::CircularLog;
+use circular_impl::Buffer;
 
-fn print_content(log :&FixedCircularBuffer::<String, 5>){
+mod instance_trait;
+mod instance_impl;
+
+use instance_trait::ClipboardInstance;
+use instance_impl::Instance;
+
+mod pager_trait;
+mod pager_impl;
+
+use pager_trait::Pager;
+use pager_impl::SystemPager;
+
+fn print_content<T: CircularLog>(log: &T) {
     println!("*----------*");
     println!("Content of clipboard: ");
-    for i in 0..log.len() {
-        println!("{}: {}",i, log[i]);
+    let items = log.get_items(); 
+    
+    for (i, item) in items.iter().enumerate() {
+        println!("{}: {}", i, item);
     }
-    println!("*----------*");
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>>{
     // RUN cargo add wayland_clipboard_listener
     // RUN cargo add circular_buffer
     
     let mut stream = WlClipboardPasteStream::init(WlListenType::ListenOnCopy).unwrap(); 
     // Open the clipboard listener to passively listen on copy events.
-    let mut clipboard_log = FixedCircularBuffer::<String, 5>::new();
+    let mut clipboard_log = Buffer::new();
+    // Instance parallel clipboard to set and get content
+    //let _clipboard_instance = Instance::new()?;
 
     for event in stream.paste_stream().flatten() {
         // Iterate through each successful event
@@ -51,10 +56,10 @@ fn main() {
                 // Decode the content to UTF-8
                 Ok(text) => {
                     // Notify the user
-                    notify_user(&"New Input in the Clipboard".to_string(), &text);
+                    let _ = SystemPager::notify_user("New Input in the Clipboard", &text);
 
                     // Push the content to the buffer
-                    clipboard_log.push_back(text);
+                    clipboard_log.push(text);
                     
                     // Print content of the whole clipboard
                     print_content(&clipboard_log);
@@ -64,7 +69,8 @@ fn main() {
                 }
             }
         } else {
-            notify_user(&"New Input in the Clipboard".to_string(), &("Not Supported for ".to_owned() + &type_actual_event + " type"));
+            let _ = SystemPager::notify_user("New Input in the Clipboard", &("Not Supported for ".to_owned() + &type_actual_event + " type"));
         }
     }
+    Ok(())
 }

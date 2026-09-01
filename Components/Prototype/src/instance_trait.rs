@@ -1,11 +1,11 @@
 pub trait ClipboardInstance {
     // Initialize instance
-    fn new() -> Result<(Self), String>;
+    fn new() -> Result<Self, String> where Self: Sized;
 
-    // Set text format and return result
-    fn set_text(&mut self, content: String) -> Result<(), String>;
+    // Write text format and return result
+    fn write_text(&mut self, content: String) -> Result<(), String>;
 
-    // Get text from clipboard and return result
-    fn get_text(&self) -> Result<String, String>;
+    // Read text from clipboard and return result
+    fn read_text(&mut self) -> Result<String, String>;
 
 }
