@@ -3,8 +3,7 @@ use std::process::Command;
 use wayland_clipboard_listener::WlListenType;
 use circular_buffer::FixedCircularBuffer;
 
-
-fn notify(title: &String, body: &String) {
+fn notify_user(title: &String, body: &String) {
     let status = Command::new("notify-send")
         .arg(title)
         .arg(body)
@@ -16,6 +15,15 @@ fn notify(title: &String, body: &String) {
     } else {
         println!("There's been an error: {}", status);
     }
+}
+
+fn print_content(log :&FixedCircularBuffer::<String, 5>){
+    println!("*----------*");
+    println!("Content of clipboard: ");
+    for i in 0..log.len() {
+        println!("{}: {}",i, log[i]);
+    }
+    println!("*----------*");
 }
 
 fn main() {
@@ -43,25 +51,20 @@ fn main() {
                 // Decode the content to UTF-8
                 Ok(text) => {
                     // Notify the user
-                    notify(&"New Input in the Clipboard".to_string(), &text);
+                    notify_user(&"New Input in the Clipboard".to_string(), &text);
 
                     // Push the content to the buffer
                     clipboard_log.push_back(text);
                     
                     // Print content of the whole clipboard
-                    println!("*----------*");
-                    println!("Content of clipboard: ");
-                    for i in 0..clipboard_log.len() {
-                        println!("{}: {}",i, clipboard_log[i]);
-                    }
-                    println!("*----------*");
+                    print_content(&clipboard_log);
                 },
                 Err(error) => {
                     eprintln!("There's been an error during decoding: {}", error);
                 }
             }
         } else {
-            notify(&"New Input in the Clipboard".to_string(), &("Not Supported for ".to_owned() + &type_actual_event + " type"));
+            notify_user(&"New Input in the Clipboard".to_string(), &("Not Supported for ".to_owned() + &type_actual_event + " type"));
         }
     }
 }
