@@ -57,10 +57,8 @@ fn load_state(log: &mut Buffer) {
         }
     }
 }
-
 fn show_rofi_menu<T: CircularLog>(log: &T) -> Option<String> {
-    // Uses rofi to show the current Clipboard log to the user. If the user chooses the options, the clipboard
-    // will add it to the current choice.
+    // Uses rofi to show the current Clipboard log to the user.
     let items = log.get_items();
     
     if items.is_empty() {
@@ -72,7 +70,18 @@ fn show_rofi_menu<T: CircularLog>(log: &T) -> Option<String> {
     let mut rofi_input = String::new();
     for (i, item) in items.iter().rev().enumerate() {
         let sanitized_item = item.replace('\n', " ↵ ");
-        rofi_input.push_str(&format!("{}: {}\n", i + 1, sanitized_item));
+        
+        // If the item is an image, extract the path and use Rofi's icon protocol
+        if item.starts_with("[Imagen] ") {
+            let file_path = item.trim_start_matches("[Imagen] ").trim();
+            
+            let file_name = file_path.split('/').last().unwrap_or("Image");
+            
+            rofi_input.push_str(&format!("{}: {}\0icon\x1f{}\n", i + 1, file_name, file_path));
+        } else {
+            // Standard text entry
+            rofi_input.push_str(&format!("{}: {}\n", i + 1, sanitized_item));
+        }
     }
     
     // Execute rofi as dmenu
@@ -81,6 +90,9 @@ fn show_rofi_menu<T: CircularLog>(log: &T) -> Option<String> {
         .arg("-i")            
         .arg("-p")            
         .arg("ClipCrab")
+        .arg("-show-icons") // REQUIRED: Tells Rofi to actually render the icons
+        .arg("-theme-str")  
+        .arg("window { width: 35%; } listview { lines: 6; } element-icon { size: 3ch; } element { children: [ element-text, element-icon ]; }")
         .stdin(Stdio::piped())  
         .stdout(Stdio::piped()) 
         .spawn()
@@ -92,11 +104,12 @@ fn show_rofi_menu<T: CircularLog>(log: &T) -> Option<String> {
 
     let output = child.wait_with_output().expect("Error when reading stdout");
 
-    // Condition if the user choosed a item.
+    // Condition if the user chose an item.
     if output.status.success() {
         let selected = String::from_utf8_lossy(&output.stdout);
         let selected = selected.trim(); 
         
+        // Rofi strips the icon path from stdout, so 'selected' will only contain "{index}: [Imagen] /tmp/..."
         if let Some(colon_pos) = selected.find(':') {
             if let Ok(display_index) = selected[..colon_pos].parse::<usize>() {
                 let real_index = display_index.saturating_sub(1);
