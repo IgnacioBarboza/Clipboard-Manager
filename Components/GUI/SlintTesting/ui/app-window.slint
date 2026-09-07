@@ -1,0 +1,111 @@
+import { VerticalBox,ScrollView } from "std-widgets.slint";
+
+component Title {
+    Text {
+        font-size: 14px;
+        font-weight: 800;
+        text: "Clipboard Manager";
+    }
+}
+
+component ListUnit inherits TouchArea {
+    in property <string> value;
+    in property <int> id;
+    in property <bool> is-active;
+
+    callback item_clicked(int);
+
+    clicked => { 
+        root.item_clicked(root.id); 
+    }
+    
+    VerticalLayout {
+        Rectangle {
+            height: 1px;
+            background: #45475a; 
+        }
+        Rectangle {
+            background: root.has-hover || root.is-active ? #313244 : transparent; 
+            
+            HorizontalLayout {
+                padding: 8px;
+                Text {
+                    color: #cdd6f4; 
+                    text: root.value;
+                    overflow: elide;
+                }
+            }
+        }
+    }
+}
+
+export component AppWindow inherits Window {
+    title: "ClipboardManagerApp";
+
+    in property <[string]> buffer_items;
+    in-out property <int> active-index: 0;
+
+    callback item_clicked(int);
+    callback close_requested();
+    
+    no-frame: true; 
+    background: transparent;
+    width: 4000px;
+    height: 4000px;
+
+    forward-focus: key-handler;
+
+    key-handler := FocusScope {
+        key-pressed(event) => {
+            if (event.text == Key.Escape) {
+                root.close_requested();
+                return accept;
+            } else if (event.text == Key.UpArrow) {
+                if (root.active-index > 0) {
+                    root.active-index -= 1;
+                }
+                return accept;
+            } else if (event.text == Key.DownArrow) {
+                if (root.active-index < root.buffer_items.length - 1) {
+                    root.active-index += 1;
+                }
+                return accept;
+            } else if (event.text == Key.Return) {
+                root.item_clicked(root.active-index);
+                return accept;
+            }
+            return reject;
+        }
+        
+        TouchArea {
+            width: 100%;
+            height: 100%;
+            clicked => { root.close_requested(); }
+        }
+
+        Rectangle {
+            width: 400px;  
+            height: 300px;
+            background: #6d717d; 
+            border-radius: 8px;
+            
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+
+            TouchArea {}
+
+            VerticalBox {
+                Title {}
+                for item[index] in root.buffer_items : ListUnit {
+                    value: item;
+                    id: index;
+                    is-active: root.active-index == index;
+                    
+                    item_clicked(id) => { 
+                        root.item_clicked(id); 
+                    }
+                }
+            }
+        }
+    }
+}
