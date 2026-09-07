@@ -26,12 +26,13 @@ mod pager_impl;
 use pager_trait::Pager;
 use pager_impl::SystemPager;
 
-// Constant path for our temporal state file (stored in RAM on Arch Linux)
+// Constant path for our temporal state file (stored in RAM on Arch)
 const STATE_FILE: &str = "/tmp/clipcrab_state.json";
 
 fn save_state<T: CircularLog>(log: &T) {
+    // This function saves the current ClipboardLog to the PATH set in the variable "STATE_FILE" in a json format
+
     let items = log.get_items();
-    // Serialize the Vec<String> to JSON
     match serde_json::to_string(&items) {
         Ok(json_str) => {
             if let Err(e) = fs::write(STATE_FILE, json_str) {
@@ -43,12 +44,12 @@ fn save_state<T: CircularLog>(log: &T) {
 }
 
 fn load_state(log: &mut Buffer) {
+    // Loads the Buffer with the content of the current clipcrab_state.json
+
     if let Ok(mut file) = File::open(STATE_FILE) {
         let mut json_str = String::new();
         if file.read_to_string(&mut json_str).is_ok() {
-            // Deserialize the JSON back into a Vec<String>
             if let Ok(items) = serde_json::from_str::<Vec<String>>(&json_str) {
-                // Re-populate the buffer
                 for item in items {
                     log.push(item);
                 }
@@ -58,6 +59,8 @@ fn load_state(log: &mut Buffer) {
 }
 
 fn show_rofi_menu<T: CircularLog>(log: &T) -> Option<String> {
+    // Uses rofi to show the current Clipboard log to the user. If the user chooses the options, the clipboard
+    // will add it to the current choice.
     let items = log.get_items();
     
     if items.is_empty() {
@@ -65,6 +68,7 @@ fn show_rofi_menu<T: CircularLog>(log: &T) -> Option<String> {
         return None;
     }
 
+    // Loads the rofi panel with the options.
     let mut rofi_input = String::new();
     for (i, item) in items.iter().rev().enumerate() {
         let sanitized_item = item.replace('\n', " ↵ ");
@@ -88,6 +92,7 @@ fn show_rofi_menu<T: CircularLog>(log: &T) -> Option<String> {
 
     let output = child.wait_with_output().expect("Error when reading stdout");
 
+    // Condition if the user choosed a item.
     if output.status.success() {
         let selected = String::from_utf8_lossy(&output.stdout);
         let selected = selected.trim(); 
@@ -123,7 +128,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
         // Load the state from the JSON file into the mock log
         load_state(&mut mock_log);
         
-        // If the user selected something, send it to the clipboard
+        // Fetches the content of the log in the choosed item by the user.
         if let Some(selected_text) = show_rofi_menu(&mock_log) {
             match WaylandClipboard::new() {
                 Ok(mut clipboard) => {
@@ -160,7 +165,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
     let mut stream = WlClipboardPasteStream::init(WlListenType::ListenOnCopy).unwrap(); 
     // Open the clipboard listener to passively listen on copy events.
     let mut clipboard_log = Buffer::new();
-    // Instance parallel clipboard to set and get content
 
     // Attempt to load existing state if the daemon restarts
     load_state(&mut clipboard_log);
@@ -176,37 +180,36 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
         let type_actual_event = actual_event.mime_type.clone();
         // Capture the MIME type
 
+        // Capture the content of the event.
         let content_actual_event = actual_event.context;
 
-        // This prevents the browser's default HTML format from overriding the image
+        // Checks whether any of the mimes types of the chosen file, is an image.
         if let Some(image_mime) = available_mimes.iter().find(|m| m.starts_with("image/")) {
-            use wl_clipboard_rs::paste::{get_contents, ClipboardType, Seat, MimeType as PasteMimeType};
-            
-            let result = get_contents(
-                ClipboardType::Regular,
-                Seat::Unspecified,
-                PasteMimeType::Specific(&image_mime.clone()),
-            );
+            // Instantiating the clipboard safely using match, just like in client mode
+            match WaylandClipboard::new() {
+                Ok(mut clipboard) => {
+                    // Delegate reading logic to the ClipboardInstance trait
+                    if let Ok(image_bytes) = clipboard.read_image(image_mime) {
+                        let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
+                        let ext = image_mime.split('/').last().unwrap_or("png");
+                        let file_path = format!("/tmp/clipcrab_img_{}.{}", timestamp, ext);
 
-            if let Ok((mut reader, _)) = result {
-                let mut image_bytes = Vec::new();
-                if reader.read_to_end(&mut image_bytes).is_ok() {
-                    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
-                    let ext = image_mime.split('/').last().unwrap_or("png");
-                    let file_path = format!("/tmp/clipcrab_img_{}.{}", timestamp, ext);
-
-                    if fs::write(&file_path, &image_bytes).is_ok() {
-                        let _ = SystemPager::notify_user("New Image Copied", &format!("Saved to {}", file_path));
-                        let formatted_image = format!("[Imagen] {}", file_path);
-                        clipboard_log.push(formatted_image);
-                        save_state(&clipboard_log);
+                        if fs::write(&file_path, &image_bytes).is_ok() {
+                            let _ = SystemPager::notify_user("New Image Copied", &format!("Saved to {}", file_path));
+                            let formatted_image = format!("[Imagen] {}", file_path);
+                            clipboard_log.push(formatted_image);
+                            save_state(&clipboard_log);
+                        } else {
+                            eprintln!("Failed to save image to disk.");
+                        }
                     } else {
-                        eprintln!("Failed to save image to disk.");
+                        eprintln!("Failed to read image from clipboard.");
                     }
-                }
+                },
+                Err(e) => eprintln!("Failed to init clipboard in daemon: {}", e),
             }
             
-            // Image is saved, skip the rest of the loop for this event
+            // Image is saved (or failed safely), skip the rest of the loop for this event
             continue; 
         }
 
@@ -220,13 +223,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
                 }
             },
 
-            // 2. HTML (IGNORED)
-            "text/html" => {
-                // Ignore HTML to prevent duplicate entries when browsers copy images/text
-                println!("Ignoring HTML input from browser.");
-            },
-
-            // 3. Not Supported Format
+            // 2. Not Supported Format
             _ => {
                 let _ = SystemPager::notify_user(
                     "New Input in the Clipboard", 

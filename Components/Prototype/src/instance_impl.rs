@@ -1,10 +1,8 @@
-use std::fs;
 use std::fs::File; // Added for write_image
 use std::io::Read;
 use std::process::{Command, Stdio};
 use std::io::Write;
 use crate::instance_trait::ClipboardInstance;
-use wl_clipboard_rs::copy::{MimeType as CopyMimeType, Options, Source};
 use wl_clipboard_rs::paste::{get_contents, ClipboardType, Error as PasteError, MimeType as PasteMimeType, Seat};
 
 pub struct WaylandClipboard;
@@ -80,5 +78,25 @@ impl ClipboardInstance for WaylandClipboard {
         child.wait().map_err(|e| format!("wl-copy process failed: {}", e))?;
 
         Ok(())
+    }
+    fn read_image(&mut self, mime_type: &str) -> Result<Vec<u8>, String> {
+        let result = get_contents(
+            ClipboardType::Regular,
+            Seat::Unspecified,
+            PasteMimeType::Specific(mime_type),
+        );
+
+        match result {
+            Ok((mut reader, _)) => {
+                let mut image_bytes = Vec::new();
+                reader.read_to_end(&mut image_bytes)
+                    .map_err(|e| format!("Failed to read image stream: {}", e))?;
+                Ok(image_bytes)
+            }
+            Err(PasteError::NoSeats) | Err(PasteError::ClipboardEmpty) => {
+                Err("Clipboard is empty".to_string())
+            }
+            Err(e) => Err(format!("Wayland read_image error: {}", e)),
+        }
     }
 }
