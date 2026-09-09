@@ -57,7 +57,7 @@ fn load_state(log: &mut Buffer) {
         }
     }
 }
-fn show_rofi_menu<T: CircularLog>(log: &T) -> Option<String> {
+fn show_rofi_menu<T: CircularLog>(log: &T) -> Option<usize> {
     // Uses rofi to show the current Clipboard log to the user.
     let items = log.get_items();
     
@@ -112,10 +112,12 @@ fn show_rofi_menu<T: CircularLog>(log: &T) -> Option<String> {
         // Rofi strips the icon path from stdout, so 'selected' will only contain "{index}: [Imagen] /tmp/..."
         if let Some(colon_pos) = selected.find(':') {
             if let Ok(display_index) = selected[..colon_pos].parse::<usize>() {
-                let real_index = display_index.saturating_sub(1);
-                if let Some(original_text) = items.iter().rev().nth(real_index) {
-                    return Some(original_text.clone());
+                if display_index == 0 || display_index > items.len() {
+                    return None;
                 }
+
+                let real_index = items.len() - display_index;
+                return Some(real_index);
             }
         }
     } else {
@@ -142,8 +144,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
         load_state(&mut mock_log);
         
         // Fetches the content of the log in the choosed item by the user.
-        if let Some(selected_text) = show_rofi_menu(&mock_log) {
-            match WaylandClipboard::new() {
+        if let Some(selected_index) = show_rofi_menu(&mock_log) {
+            let selected_text = match mock_log.get_items().get(selected_index) {
+                Some(item) => item.clone(),
+                None => {
+                    eprintln!("The selected index is no longer valid.");
+                    return Ok(());
+                }
+            };
+
+            let copy_succeeded = match WaylandClipboard::new() {
                 Ok(mut clipboard) => {
                     // 1. IMAGE
                     if selected_text.starts_with("[Imagen] ") {
@@ -151,24 +161,50 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
                         let file_path = selected_text.trim_start_matches("[Imagen] ").trim();
                         
                         match clipboard.write_image(file_path) {
-                            Ok(_) => println!("Successfully copied IMAGE!"),
-                            Err(e) => eprintln!("Failed to write image: {}", e),
+                            Ok(_) => {
+                                println!("Successfully copied IMAGE!");
+                                true
+                            }
+                            Err(e) => {
+                                eprintln!("Failed to write image: {}", e);
+                                false
+                            }
                         }
                     } 
                     // 2. HTML (Not Supported)
                     else if selected_text.starts_with("[HTML] ") {
                         println!("Format not supported.");
                         let _ = SystemPager::notify_user("ClipCrab", "HTML format not supported from menu.");
+                        false
                     } 
                     // 3. TEXT PLAIN
                     else {
-                        match clipboard.write_text(selected_text) {
-                            Ok(_) => println!("Successfully copied TEXT!"),
-                            Err(e) => eprintln!("Failed to write text: {}", e),
+                        match clipboard.write_text(selected_text.clone()) {
+                            Ok(_) => {
+                                println!("Successfully copied TEXT!");
+                                true
+                            }
+                            Err(e) => {
+                                eprintln!("Failed to write text: {}", e);
+                                false
+                            }
                         }
                     }
                 },
-                Err(e) => eprintln!("Failed to init clipboard: {}", e),
+                Err(e) => {
+                    eprintln!("Failed to init clipboard: {}", e);
+                    false
+                }
+            };
+
+            if copy_succeeded {
+                match mock_log.remove_index(selected_index) {
+                    Ok(_) => {
+                        mock_log.push(selected_text);
+                        save_state(&mock_log);
+                    }
+                    Err(e) => eprintln!("Failed to update clipboard history: {}", e),
+                }
             }
         }
         return Ok(());

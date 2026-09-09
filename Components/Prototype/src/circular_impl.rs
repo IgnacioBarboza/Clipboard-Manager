@@ -16,4 +16,12 @@ impl CircularLog for Buffer {
     fn push(&mut self, content: String) {
         self.push_back(content);
     }
+
+    // Removes and returns the value at the selected index
+    fn remove_index(&mut self, selected: usize) -> Result<String, &str> {
+        match self.remove(selected) {
+            Some(item) => Ok(item),
+            None => Err("The buffer has no value at this index"),
+        }
+    }
 }

@@ -7,4 +7,7 @@ pub trait CircularLog {
 
     // Inserts a Value to the back of the buffer
     fn push(&mut self, content: String);
+
+    // Removes and returns the value at the selected index
+    fn remove_index(&mut self, selected: usize) -> Result<String, &str>;
 }
