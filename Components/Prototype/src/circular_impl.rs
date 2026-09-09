@@ -98,7 +98,7 @@ mod tests {
 
         // Assert
         assert_eq!(removed, Ok("2".to_string()));
-
+        
         let items = buffer.get_items();
 
         assert_eq!(items, vec![

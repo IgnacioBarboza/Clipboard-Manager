@@ -61,6 +61,15 @@ fn load_state(log: &mut Buffer) {
     }
 }
 
+fn record_history_item(log: &mut Buffer, item: String) {
+    if let Some(index) = log.get_items().iter().position(|stored| stored == &item) {
+        let _ = log.remove_index(index);
+    }
+
+    log.push(item);
+    save_state(log);
+}
+
 fn show_rofi_menu<T: CircularLog>(log: &T) -> Option<usize> {
     // Uses rofi to show the current Clipboard log to the user.
     let items = log.get_items();
@@ -170,8 +179,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             match WaylandClipboard::new() {
                 Ok(mut clipboard) => {
-                    let copy_succeeded;
-
                     // 1. IMAGE
                     if selected_text.starts_with("[Imagen] ") {
                         // Extract the file path by removing the prefix
@@ -179,49 +186,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             .trim_start_matches("[Imagen] ")
                             .trim();
 
-                        copy_succeeded = match clipboard.write_image(file_path) {
-                            Ok(_) => {
-                                println!("Successfully copied IMAGE!");
-                                true
-                            }
-                            Err(e) => {
-                                eprintln!("Failed to write image: {}", e);
-                                false
-                            }
-                        };
+                        match clipboard.write_image(file_path) {
+                            Ok(_) => println!("Successfully copied IMAGE!"),
+                            Err(e) => eprintln!("Failed to write image: {}", e),
+                        }
                     }
                     // 2. HTML (Not Supported)
                     else if selected_text.starts_with("[HTML] ") {
                         println!("Format not supported.");
+
                         let _ = SystemPager::notify_user(
                             "ClipCrab",
                             "HTML format not supported from menu.",
                         );
-                        copy_succeeded = false;
                     }
                     // 3. TEXT PLAIN
                     else {
-                        copy_succeeded = match clipboard.write_text(selected_text.clone()) {
-                            Ok(_) => {
-                                println!("Successfully copied TEXT!");
-                                true
-                            }
-                            Err(e) => {
-                                eprintln!("Failed to write text: {}", e);
-                                false
-                            }
-                        };
-                    }
-
-                    if copy_succeeded {
-                        match mock_log.remove_index(selected_index) {
-                            Ok(_) => {
-                                mock_log.push(selected_text);
-                                save_state(&mock_log);
-                            }
-                            Err(e) => {
-                                eprintln!("Failed to update clipboard history: {}", e);
-                            }
+                        match clipboard.write_text(selected_text) {
+                            Ok(_) => println!("Successfully copied TEXT!"),
+                            Err(e) => eprintln!("Failed to write text: {}", e),
                         }
                     }
                 }
@@ -233,7 +216,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Daemon Mode: Passively listen on copy events
-    let mut stream = WlClipboardPasteStream::init(WlListenType::ListenOnCopy).unwrap();
+    let mut stream =
+        WlClipboardPasteStream::init(WlListenType::ListenOnCopy).unwrap();
 
     // Open the clipboard listener to passively listen on copy events.
     let mut clipboard_log = Buffer::new();
@@ -252,8 +236,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let type_actual_event = actual_event.mime_type.clone();
         // Capture the MIME type
 
-        let content_actual_event = actual_event.context;
         // Capture the content of the event.
+        let content_actual_event = actual_event.context;
 
         // Checks whether any of the mimes types of the chosen file, is an image.
         if let Some(image_mime) = available_mimes.iter().find(|m| m.starts_with("image/")) {
@@ -277,8 +261,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             );
 
                             let formatted_image = format!("[Imagen] {}", file_path);
-                            clipboard_log.push(formatted_image);
-                            save_state(&clipboard_log);
+                            record_history_item(&mut clipboard_log, formatted_image);
                         } else {
                             eprintln!("Failed to save image to disk.");
                         }
@@ -298,8 +281,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "text/plain;charset=utf-8" | "text/plain" => {
                 if let Ok(text) = String::from_utf8(content_actual_event) {
                     let _ = SystemPager::notify_user("New Text Copied", &text);
-                    clipboard_log.push(text);
-                    save_state(&clipboard_log);
+                    record_history_item(&mut clipboard_log, text);
+                }
+            }
+
+            "application/octet-stream" => {
+                if let Ok(text) = String::from_utf8(content_actual_event) {
+                    let _ = SystemPager::notify_user("New Text Copied", &text);
+                    record_history_item(&mut clipboard_log, text);
+                } else {
+                    let _ = SystemPager::notify_user(
+                        "New Input in the Clipboard",
+                        "The clipboard data is not valid UTF-8 text.",
+                    );
                 }
             }
 
