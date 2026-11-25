@@ -1,0 +1,21 @@
+[package]
+name = "clipcrab"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.93"
+description = "A lightweight clipboard history manager for Wayland, with a rofi picker and image support"
+license = "MIT"
+repository = "https://github.com/IgnacioBarboza/Clipboard-Manager"
+readme = "README.md"
+keywords = ["clipboard", "wayland", "rofi", "hyprland", "clipboard-manager"]
+categories = ["command-line-utilities"]
+exclude = ["research/", ".github/"]
+
+[dependencies]
+circular-buffer = "2.0.1"
+serde_json = "1.0.151"
+wayland-clipboard-listener = "0.6.1"
+wl-clipboard-rs = "0.9.3"
+
+[dev-dependencies]
+tempfile = "3"

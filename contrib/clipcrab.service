@@ -1,0 +1,13 @@
+[Unit]
+Description=ClipCrab clipboard history daemon
+Documentation=https://github.com/IgnacioBarboza/Clipboard-Manager
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+ExecStart=%h/.cargo/bin/clipcrab
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target
