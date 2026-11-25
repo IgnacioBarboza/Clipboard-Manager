@@ -2,7 +2,7 @@
 name = "clipcrab"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.93"
 description = "A lightweight clipboard history manager for Wayland, with a rofi picker and image support"
 license = "MIT"
 repository = "https://github.com/IgnacioBarboza/Clipboard-Manager"
