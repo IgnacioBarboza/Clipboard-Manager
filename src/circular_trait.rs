@@ -1,13 +1,12 @@
+/// A bounded clipboard history that keeps items in insertion order
+/// (oldest first) and evicts the oldest item once it is full.
 pub trait CircularLog {
-    // Initialize buffer
-    fn new() -> Self;
-
-    // DEBUG, prints content
+    /// Returns a snapshot of the stored items, oldest first.
     fn get_items(&self) -> Vec<String>;
 
-    // Inserts a Value to the back of the buffer
+    /// Appends an item, evicting the oldest one if the log is full.
     fn push(&mut self, content: String);
 
-    // Selects the index and retrives the content
-    fn remove_index(&mut self, selected: usize) -> Result<String, &str>;
+    /// Removes and returns the item at `selected`.
+    fn remove_index(&mut self, selected: usize) -> Result<String, &'static str>;
 }
