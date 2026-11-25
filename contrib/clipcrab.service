@@ -1,6 +1,6 @@
 [Unit]
 Description=ClipCrab clipboard history daemon
-Documentation=https://github.com/IgnacioBarboza/Clipboard-Manager
+Documentation=https://github.com/IgnacioBarboza/clipcrab
 PartOf=graphical-session.target
 After=graphical-session.target
 
