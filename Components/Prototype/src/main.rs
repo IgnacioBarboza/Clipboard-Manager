@@ -250,10 +250,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }
                         };
                         if fs::write(&file_path, &image_bytes).is_ok() {
-                            let _ = SystemPager::notify_user(
-                                "New Image Copied",
-                                &format!("Saved to {}", file_path.display()),
-                            );
+                            //let _ = SystemPager::notify_user(
+                            //    "New Image Copied",
+                            //    &format!("Saved to {}", file_path.display()),
+                            //);
 
                             let formatted_image = format!(
                                 "{}{}",
@@ -280,20 +280,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // 1. Plain text
             "text/plain;charset=utf-8" | "text/plain" => {
                 if let Ok(text) = String::from_utf8(content_actual_event) {
-                    let _ = SystemPager::notify_user("New Text Copied", &text);
+                    //let _ = SystemPager::notify_user("New Text Copied", &text);
                     record_history_item(&mut clipboard_log, text);
                 }
             }
 
             "application/octet-stream" => {
                 if let Ok(text) = String::from_utf8(content_actual_event) {
-                    let _ = SystemPager::notify_user("New Text Copied", &text);
+                    //let _ = SystemPager::notify_user("New Text Copied", &text);
                     record_history_item(&mut clipboard_log, text);
                 } else {
-                    let _ = SystemPager::notify_user(
-                        "New Input in the Clipboard",
-                        "The clipboard data is not valid UTF-8 text.",
-                    );
+                    //let _ = SystemPager::notify_user(
+                    //    "New Input in the Clipboard",
+                    //    "The clipboard data is not valid UTF-8 text.",
+                    //);
                 }
             }
 

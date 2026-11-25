@@ -1,7 +1,7 @@
 use circular_buffer::FixedCircularBuffer;
 use crate::circular_trait::CircularLog;
 
-const SIZE: usize = 5;
+const SIZE: usize = 10;
 pub type Buffer = FixedCircularBuffer<String, SIZE>;
 
 impl CircularLog for Buffer {
