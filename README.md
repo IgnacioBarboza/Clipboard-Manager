@@ -1,6 +1,6 @@
 # ClipCrab 🦀
 
-[![CI](https://github.com/IgnacioBarboza/Clipboard-Manager/actions/workflows/ci.yml/badge.svg)](https://github.com/IgnacioBarboza/Clipboard-Manager/actions/workflows/ci.yml)
+[![CI](https://github.com/IgnacioBarboza/clipcrab/actions/workflows/ci.yml/badge.svg)](https://github.com/IgnacioBarboza/clipcrab/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A lightweight clipboard history manager for Wayland, written in Rust.
@@ -38,7 +38,7 @@ sudo pacman -S wl-clipboard rofi libnotify rust
 ## Installation
 
 ```sh
-git clone https://github.com/IgnacioBarboza/Clipboard-Manager.git clipcrab
+git clone https://github.com/IgnacioBarboza/clipcrab.git
 cd clipcrab
 cargo install --path .
 ```
