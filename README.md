@@ -8,7 +8,7 @@ A lightweight clipboard history manager for Wayland, written in Rust.
 ClipCrab runs in the background, remembers the last things you copied (text and images)
 and lets you bring any of them back through a [rofi](https://github.com/davatorium/rofi) menu.
 
-![alt text](image.png)
+![ClipCrab history menu in rofi](docs/screenshot.png)
 
 ## Features
 
